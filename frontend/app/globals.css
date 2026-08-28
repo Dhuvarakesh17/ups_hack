@@ -1,9 +1,141 @@
+@import url('https://fonts.cdnfonts.com/css/sf-pro-display');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
 
+@font-face {
+  font-family: 'BlinkMacSystemFont';
+  src: local('SF Pro Display'), local('SF Pro Text'), local('-apple-system'),
+       url('https://fonts.cdnfonts.com/s/14883/SFProDisplay-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
-body {
-  background: var(--background);
+@font-face {
+  font-family: 'BlinkMacSystemFont';
+  src: local('SF Pro Display Medium'), local('SF Pro Text Medium'),
+       url('https://fonts.cdnfonts.com/s/14883/SFProDisplay-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BlinkMacSystemFont';
+  src: local('SF Pro Display Semibold'), local('SF Pro Text Semibold'),
+       url('https://fonts.cdnfonts.com/s/14883/SFProDisplay-Semibold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BlinkMacSystemFont';
+  src: local('SF Pro Display Bold'), local('SF Pro Text Bold'),
+       url('https://fonts.cdnfonts.com/s/14883/SFProDisplay-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BlinkMacSystemFont';
+  src: local('SF Pro Display Heavy'), local('SF Pro Text Heavy'),
+       url('https://fonts.cdnfonts.com/s/14883/SFProDisplay-Heavy.woff') format('woff');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "BlinkMacSystemFont", "SF Pro Display", "SF Pro Text", -apple-system, sans-serif;
+  --color-dark: #17231b;
+  --color-light: #d9ff69;
+  --color-lighter: #edf7cd;
+}
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #17231b;
+    --card: #ffffff;
+    --card-foreground: #17231b;
+    --border: #e2ebd0;
+    --input: #e2ebd0;
+    --primary: #17231b;
+    --primary-foreground: #d9ff69;
+    --accent: #d9ff69;
+    --accent-lighter: #edf7cd;
+    --muted: #5a6e60;
+    --muted-background: #f7fbf2;
+    color-scheme: light;
+  }
+
+  .dark, [data-theme="dark"] {
+    --background: #17231b;
+    --foreground: #edf7cd;
+    --card: #1f2e24;
+    --card-foreground: #edf7cd;
+    --border: #2d4234;
+    --input: #2d4234;
+    --primary: #d9ff69;
+    --primary-foreground: #17231b;
+    --accent: #d9ff69;
+    --accent-lighter: #edf7cd;
+    --muted: #9bb3a1;
+    --muted-background: #1b2920;
+    color-scheme: dark;
+  }
+}
+
+*, *::before, *::after, html, body, div, span,
+h1, h2, h3, h4, h5, h6, p, a, label,
+table, tbody, thead, tr, th, td,
+button, input, select, textarea, optgroup {
+  font-family: "BlinkMacSystemFont", "SF Pro Display", "SF Pro Text", -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.015em;
+}
+
+html, body {
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom selection */
+::selection {
+  background: #d9ff69;
+  color: #17231b;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(217, 255, 105, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 255, 105, 0.6);
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 235, 208, 0.8);
+}
+.dark .glass-panel, [data-theme="dark"] .glass-panel {
+  background: rgba(31, 46, 36, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(45, 66, 52, 0.8);
 }

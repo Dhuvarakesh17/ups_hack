@@ -15,7 +15,7 @@ class FeatureExtractor:
     @staticmethod
     def extract_features(shipment: Shipment, history: List[ShipmentStatusHistory]) -> Dict[str, Any]:
         sorted_history = sorted(
-            history,
+            history or [],
             key=lambda h: ensure_utc(h.timestamp)
         )
 
@@ -31,7 +31,8 @@ class FeatureExtractor:
             "failed": 2
         }
 
-        current_rank = status_rank_map.get(shipment.current_status, 0)
+        current_status = shipment.current_status or "created"
+        current_rank = status_rank_map.get(current_status, 0)
         progress_ratio = current_rank / total_stages
 
         stage_durations = []
@@ -45,15 +46,23 @@ class FeatureExtractor:
             sum(stage_durations) / len(stage_durations) if stage_durations else None
         )
 
-        is_express = shipment.delivery_type.lower() == "express"
-        volumetric_weight = (shipment.length * shipment.width * shipment.height) / 5000.0
-        billable_weight = max(shipment.weight or 1.0, volumetric_weight)
+        delivery_type = (shipment.delivery_type or "standard").lower()
+        is_express = delivery_type == "express"
+        
+        length = float(shipment.length) if shipment.length is not None else 10.0
+        width = float(shipment.width) if shipment.width is not None else 10.0
+        height = float(shipment.height) if shipment.height is not None else 10.0
+        weight = float(shipment.weight) if shipment.weight is not None else 1.0
 
-        is_fragile = shipment.product_type.lower() == "fragile"
-        is_electronics = shipment.product_type.lower() == "electronics"
+        volumetric_weight = (length * width * height) / 5000.0
+        billable_weight = max(weight, volumetric_weight)
+
+        product_type = (shipment.product_type or "standard").lower()
+        is_fragile = product_type == "fragile"
+        is_electronics = product_type == "electronics"
 
         return {
-            "current_status": shipment.current_status,
+            "current_status": current_status,
             "current_rank": current_rank,
             "progress_ratio": progress_ratio,
             "history_count": len(sorted_history),
@@ -65,4 +74,3 @@ class FeatureExtractor:
             "is_electronics": is_electronics,
             "created_at": ensure_utc(shipment.created_at)
         }
-

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Loader2, CheckCircle, ArrowRight, Lock } from "lucide-react";
+import { Play, Loader2, ArrowRight, Lock } from "lucide-react";
 import confetti from "canvas-confetti";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -13,6 +13,7 @@ interface StatusSimulationButtonProps {
   onStatusUpdated?: (updatedShipment: Shipment) => void;
   size?: "sm" | "md";
   showLabel?: boolean;
+  className?: string;
 }
 
 export function StatusSimulationButton({
@@ -20,6 +21,7 @@ export function StatusSimulationButton({
   onStatusUpdated,
   size = "sm",
   showLabel = true,
+  className = "",
 }: StatusSimulationButtonProps) {
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
@@ -47,7 +49,7 @@ export function StatusSimulationButton({
 
       const newStatusReadable = res.new_status.replace("_", " ").toUpperCase();
       success(
-        `Shipment ${shipment.shipment_number} transitioned from ${res.previous_status.replace("_", " ")} to ${newStatusReadable}. Timeline, prediction, and email notification triggered.`,
+        `Shipment ${shipment.shipment_number} transitioned from ${res.previous_status.replace("_", " ")} to ${newStatusReadable}.`,
         "Simulation Successful!",
       );
 
@@ -77,7 +79,7 @@ export function StatusSimulationButton({
       <button
         disabled
         title="Shipment already completed. No further transitions available."
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#edf7cd]/40 dark:bg-[#25372b] text-slate-400 dark:text-[#9bb3a1] cursor-not-allowed border border-[#e2ebd0] dark:border-[#2d4234]"
+        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#edf7cd]/40 dark:bg-[#25372b] text-slate-400 dark:text-[#9bb3a1] cursor-not-allowed border border-[#e2ebd0] dark:border-[#2d4234] ${className}`}
       >
         <Lock className="w-3.5 h-3.5" />
         <span>Completed</span>
@@ -89,9 +91,9 @@ export function StatusSimulationButton({
     <button
       onClick={handleSimulate}
       disabled={loading}
-      className={`group relative inline-flex items-center gap-1.5 font-black rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-60 cursor-pointer ${
-        size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"
-      } bg-[#17231b] dark:bg-[#d9ff69] hover:bg-[#223529] dark:hover:bg-[#cbf748] text-[#d9ff69] dark:text-[#17231b]`}
+      className={`group relative inline-flex items-center justify-center gap-1.5 font-black rounded-xl transition-all shadow-xs active:scale-95 disabled:opacity-60 cursor-pointer ${
+        size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-2.5 text-sm"
+      } bg-[#17231b] dark:bg-[#d9ff69] hover:bg-[#223529] dark:hover:bg-[#cbf748] text-[#d9ff69] dark:text-[#17231b] ${className}`}
     >
       {loading ? (
         <>
@@ -100,11 +102,11 @@ export function StatusSimulationButton({
         </>
       ) : (
         <>
-          <Play className="w-3.5 h-3.5 fill-[#d9ff69] dark:fill-[#17231b] text-[#d9ff69] dark:text-[#17231b] group-hover:scale-110 transition-transform" />
+          <Play className="w-3.5 h-3.5 fill-[#d9ff69] dark:fill-[#17231b] text-[#d9ff69] dark:text-[#17231b] group-hover:scale-110 transition-transform shrink-0" />
           {showLabel ? (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 truncate text-[11px] sm:text-xs">
               Simulate: <span className="opacity-80">{config.label}</span>{" "}
-              <ArrowRight className="w-3 h-3" />{" "}
+              <ArrowRight className="w-3 h-3 shrink-0" />{" "}
               <span className="underline font-black">{nextLabel}</span>
             </span>
           ) : (

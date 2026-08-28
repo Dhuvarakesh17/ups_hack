@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import {
@@ -36,6 +36,10 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const savedName = localStorage.getItem("current_user_name");
+    const savedEmail = localStorage.getItem("current_user_email");
+    const savedImage = localStorage.getItem("current_user_image");
+
     api.profile
       .get()
       .then((data) => {
@@ -44,27 +48,32 @@ export default function ProfilePage() {
           const googleUser = session.user;
           const mergedData = {
             ...data,
-            name:
-              data.name && data.name !== "Alex Morgan"
-                ? data.name
-                : googleUser.name || data.name,
+            name: googleUser.name || data.name,
             email: googleUser.email || data.email,
             image: googleUser.image || data.image,
           };
           setUser(mergedData);
           setName(mergedData.name || "");
         } else {
-          setUser(data);
-          setName(data.name);
+          setUser({
+            ...data,
+            name: savedName || data.name,
+            email: savedEmail || data.email,
+            image: savedImage || data.image,
+          });
+          setName(savedName || data.name);
         }
       })
       .catch(() => {
         const defaultUser: UserType = {
           id: "usr_demo",
-          name: session?.user?.name || "Alex Morgan",
-          email: session?.user?.email || "demo@onelogistics.com",
+          name: savedName || session?.user?.name || "Alex Morgan",
+          email: savedEmail || session?.user?.email || "demo@onelogistics.com",
+          image:
+            savedImage ||
+            session?.user?.image ||
+            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
           email_verified: true,
-          image: session?.user?.image,
           created_at: new Date().toISOString(),
         };
         setUser(defaultUser);

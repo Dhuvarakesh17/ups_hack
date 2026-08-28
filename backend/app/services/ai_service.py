@@ -3,42 +3,57 @@ import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.core.config import settings
-from app.models.models import Shipment, Draft
+from app.models.models import Shipment, Draft, User
 from app.schemas.schemas import ChatMessage, AIChatResponse, StructuredRecommendation
 
 logger = logging.getLogger("ai_service")
 
+# Priority list of live Groq models verified for active deployment
+GROQ_MODELS = [
+    "qwen/qwen3.8-27b",
+    "groq/compound-mini",
+    "qwen/qwen3.6-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant"
+]
+
 class AIService:
     @staticmethod
     def _build_system_prompt(user_id: str, db: Session) -> str:
-        active_shipments = db.query(Shipment).filter(
-            Shipment.user_id == user_id,
-            Shipment.current_status.notin_(["delivered", "failed", "exception"])
-        ).all()
+        user = db.query(User).filter(User.id == user_id).first()
+        user_name = user.name if user else "Logistics User"
+
+        shipments = db.query(Shipment).filter(Shipment.user_id == user_id).order_by(Shipment.created_at.desc()).limit(10).all()
+        active_shipments = [s for s in shipments if s.current_status not in ("delivered", "failed", "exception")]
+        delivered_shipments = [s for s in shipments if s.current_status == "delivered"]
 
         drafts = db.query(Draft).filter(Draft.user_id == user_id).all()
 
         shipment_context = []
         for s in active_shipments:
             shipment_context.append(
-                f"- Tracking: {s.shipment_number}, Item: {s.product_name}, Status: {s.current_status}, "
-                f"Route: {s.sender_city} -> {s.receiver_city}, Service: {s.delivery_type}"
+                f"- Tracking: {s.shipment_number} | Product: {s.product_name} | Status: {s.current_status.upper()} | "
+                f"Origin: {s.sender_city}, {s.sender_state} -> Destination: {s.receiver_city}, {s.receiver_state} | "
+                f"Service: {s.delivery_type.capitalize()} | Amount: ${s.total_amount or 0.0:.2f}"
             )
 
         draft_context = [f"- Draft: '{d.name}' (Step {d.current_step}/5)" for d in drafts]
 
-        return f"""You are the One Logistics Experience AI Assistant.
-You have real-time access to the user's active logistics records:
+        return f"""You are ONE ASSIST, the intelligent AI logistics copilot for the One Logistics platform, assisting {user_name}.
+You have real-time live access to the user's active shipments, transit history, and booking drafts:
 
-ACTIVE SHIPMENTS:
-{chr(10).join(shipment_context) if shipment_context else 'No active shipments en route.'}
+LIVE ACTIVE SHIPMENTS:
+{chr(10).join(shipment_context) if shipment_context else 'No shipments currently in transit.'}
 
-SAVED DRAFTS:
-{chr(10).join(draft_context) if draft_context else 'No saved drafts.'}
+DELIVERED SHIPMENTS: {len(delivered_shipments)} package(s) delivered.
+SAVED DRAFTS: {chr(10).join(draft_context) if draft_context else 'No saved drafts.'}
 
 INSTRUCTIONS:
-1. Answer customer queries about package statuses, linehaul routes, and service options concisely and accurately.
-2. If the user asks for shipping advice or describes cargo they want to send (e.g. weight, fragility, speed, destination), provide a helpful explanation AND include a structured recommendation in JSON block formatted as:
+1. Provide concise, friendly, and highly professional answers about shipments, transit checkpoints, linehaul routes, and rate calculations.
+2. Use markdown formatting with clear bullet points and bold text for tracking numbers and statuses.
+3. If the user asks for shipping advice, estimates, or describes a package they want to send (e.g. weight, fragility, speed, destination), provide your expert recommendation AND append a structured JSON block at the very end formatted as:
 ```json
 {{
   "recommendation": {{
@@ -61,33 +76,45 @@ INSTRUCTIONS:
         system_prompt = cls._build_system_prompt(user_id, db)
         user_query = messages[-1].content if messages else ""
 
-        # Try Groq API if key is present
-        if settings.GROQ_API_KEY and not settings.GROQ_API_KEY.startswith("gsk_demo"):
+        # Check if Groq API key is configured
+        raw_key = (settings.GROQ_API_KEY or "").strip()
+        if raw_key and not raw_key.startswith("gsk_demo"):
             try:
                 from groq import Groq
-                client = Groq(api_key=settings.GROQ_API_KEY)
+                client = Groq(api_key=raw_key)
 
                 groq_messages = [{"role": "system", "content": system_prompt}]
-                for m in messages:
+                for m in messages[-8:]:  # Keep recent context
                     groq_messages.append({"role": m.role, "content": m.content})
 
-                completion = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=groq_messages,
-                    temperature=0.3,
-                    max_tokens=600
-                )
+                response_text = None
+                # Cascade through available Groq models
+                for model in GROQ_MODELS:
+                    try:
+                        completion = client.chat.completions.create(
+                            model=model,
+                            messages=groq_messages,
+                            temperature=0.3,
+                            max_tokens=700
+                        )
+                        response_text = completion.choices[0].message.content
+                        if response_text:
+                            logger.info(f"Groq successfully responded with model: {model}")
+                            break
+                    except Exception as model_err:
+                        logger.info(f"Groq model {model} attempt: {model_err}. Trying next model...")
+                        continue
 
-                response_text = completion.choices[0].message.content
-                recommendation = cls._extract_json_recommendation(response_text)
-                clean_text = cls._strip_json_block(response_text)
+                if response_text:
+                    recommendation = cls._extract_json_recommendation(response_text)
+                    clean_text = cls._strip_json_block(response_text)
 
-                return AIChatResponse(
-                    message=clean_text,
-                    recommendation=recommendation
-                )
+                    return AIChatResponse(
+                        message=clean_text,
+                        recommendation=recommendation
+                    )
             except Exception as e:
-                logger.warning(f"Groq API call failed: {e}. Falling back to rule-based logistics intelligence.")
+                logger.warning(f"Groq API connection error: {e}. Falling back to rule-based engine.")
 
         # Intelligent Rule-Based Logistics Assistant Fallback
         return cls._rule_based_fallback(db, user_id, user_query)
@@ -99,15 +126,16 @@ INSTRUCTIONS:
         active = [s for s in shipments if s.current_status not in ("delivered", "failed", "exception")]
 
         # Query tracking status
-        if any(k in q for k in ["where", "status", "track", "latest", "active", "package"]):
+        if any(k in q for k in ["where", "status", "track", "latest", "active", "package", "shipment"]):
             if active:
                 latest = active[0]
                 return AIChatResponse(
                     message=f"Your active shipment **{latest.shipment_number}** ({latest.product_name}) is currently **{latest.current_status.replace('_', ' ').upper()}**.\n\n"
-                            f"• **Origin:** {latest.sender_city}, {latest.sender_state}\n"
-                            f"• **Destination:** {latest.receiver_city}, {latest.receiver_state}\n"
-                            f"• **Service:** {latest.delivery_type.capitalize()} Linehaul\n\n"
-                            f"You can view real-time milestone checkpoints or simulate the next carrier stage from your dashboard."
+                            f"- **Origin:** {latest.sender_city}, {latest.sender_state}\n"
+                            f"- **Destination:** {latest.receiver_city}, {latest.receiver_state}\n"
+                            f"- **Service:** {latest.delivery_type.capitalize()} Linehaul\n"
+                            f"- **Freight Total:** ${latest.total_amount or 25.0:.2f}\n\n"
+                            f"You can view real-time milestone checkpoints or simulate the next carrier stage directly from your dashboard."
                 )
             else:
                 return AIChatResponse(
@@ -117,8 +145,9 @@ INSTRUCTIONS:
         # Shipping Recommendations
         is_fragile = any(k in q for k in ["fragile", "glass", "sensor", "lens", "delicate", "camera"])
         is_express = any(k in q for k in ["fast", "quick", "urgent", "express", "overnight", "priority", "rush"])
-        
-        product_type = "fragile" if is_fragile else ("electronics" if "laptop" in q or "phone" in q else "standard")
+        is_electronics = any(k in q for k in ["laptop", "phone", "screen", "tablet", "device", "pc", "gpu"])
+
+        product_type = "fragile" if is_fragile else ("electronics" if is_electronics else "standard")
         delivery_type = "express" if is_express else "standard"
         cost = 68.50 if delivery_type == "express" else 34.00
 
@@ -130,16 +159,16 @@ INSTRUCTIONS:
             estimated_cost=cost,
             estimated_days="1-2 business days" if delivery_type == "express" else "3-5 business days",
             handling_notes="Air cushion reinforcement & tamper-evident seal applied." if is_fragile else "Standard parcel sorting and scanning.",
-            product_name="Fragile Equipment" if is_fragile else "Standard Parcel",
+            product_name="Fragile Equipment" if is_fragile else ("Electronic Device" if is_electronics else "Standard Parcel"),
             weight=3.5
         )
 
         return AIChatResponse(
-            message=f"Based on your specifications, I recommend **{delivery_type.upper()} Linehaul** with **{product_type.upper()}** classification.\n\n"
-                    f"• **Estimated Transit:** {rec.estimated_days}\n"
-                    f"• **Estimated Freight:** ${rec.estimated_cost:.2f}\n"
-                    f"• **Handling:** {rec.handling_notes}\n\n"
-                    f"Click **[ Proceed to Shipment ]** below to load this plan into your 5-step booking wizard.",
+            message=f"Based on your request, I recommend **{delivery_type.upper()} Linehaul** with **{product_type.upper()}** classification.\n\n"
+                    f"- **Estimated Transit:** {rec.estimated_days}\n"
+                    f"- **Estimated Freight:** ${rec.estimated_cost:.2f}\n"
+                    f"- **Handling Notes:** {rec.handling_notes}\n\n"
+                    f"Click **[ Proceed to Shipment ]** below to pre-fill these details in your booking wizard.",
             recommendation=rec
         )
 
@@ -162,4 +191,3 @@ INSTRUCTIONS:
             after = parts[1].split("```", 1)[1] if "```" in parts[1] else ""
             return (parts[0] + after).strip()
         return text
-

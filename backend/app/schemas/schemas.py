@@ -17,8 +17,8 @@ class UserUpdate(BaseModel):
 
 class UserOut(UserBase):
     id: str
-    email_verified: bool
-    created_at: datetime
+    email_verified: bool = False
+    created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 class PasswordChangeRequest(BaseModel):
@@ -41,7 +41,7 @@ class UserPreferencesUpdate(BaseModel):
 class UserPreferencesOut(UserPreferencesBase):
     id: str
     user_id: str
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 # ----------------- Status History Schemas -----------------
@@ -51,7 +51,7 @@ class ShipmentStatusHistoryOut(BaseModel):
     status: str
     location: Optional[str] = None
     note: Optional[str] = None
-    timestamp: datetime
+    timestamp: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 class ShipmentStatusUpdate(BaseModel):
@@ -62,7 +62,7 @@ class ShipmentStatusUpdate(BaseModel):
 # ----------------- Prediction Schemas -----------------
 class PredictionDetails(BaseModel):
     estimated_delivery_time: Optional[datetime] = None
-    prediction_state: str  # accurate, preliminary, completed, indeterminate
+    prediction_state: str = "accurate"  # accurate, preliminary, completed, indeterminate
     confidence_score: Optional[float] = None
     estimated_hours_remaining: Optional[float] = None
     explanation_factors: List[str] = []
@@ -104,43 +104,43 @@ class ShipmentCreate(BaseModel):
 class ShipmentOut(BaseModel):
     id: str
     shipment_number: str
-    user_id: str
-    sender_name: str
-    sender_email: str
-    sender_phone: str
-    sender_address: str
-    sender_city: str
-    sender_state: str
-    sender_postal_code: str
-    sender_country: str
-    receiver_name: str
-    receiver_email: str
-    receiver_phone: str
-    receiver_address: str
-    receiver_city: str
-    receiver_state: str
-    receiver_postal_code: str
-    receiver_country: str
-    product_name: str
+    user_id: Optional[str] = "usr_demo"
+    sender_name: Optional[str] = "Alex Morgan"
+    sender_email: Optional[str] = "demo@onelogistics.com"
+    sender_phone: Optional[str] = ""
+    sender_address: Optional[str] = ""
+    sender_city: Optional[str] = ""
+    sender_state: Optional[str] = ""
+    sender_postal_code: Optional[str] = ""
+    sender_country: Optional[str] = "United States"
+    receiver_name: Optional[str] = "Recipient"
+    receiver_email: Optional[str] = ""
+    receiver_phone: Optional[str] = ""
+    receiver_address: Optional[str] = ""
+    receiver_city: Optional[str] = ""
+    receiver_state: Optional[str] = ""
+    receiver_postal_code: Optional[str] = ""
+    receiver_country: Optional[str] = "United States"
+    product_name: Optional[str] = "Package"
     product_description: Optional[str] = None
-    length: float
-    width: float
-    height: float
-    weight: float
-    product_type: str
-    delivery_type: str
-    payment_mode: str
-    billing_location: str
-    total_amount: float
-    current_status: str
+    length: Optional[float] = 10.0
+    width: Optional[float] = 10.0
+    height: Optional[float] = 10.0
+    weight: Optional[float] = 1.0
+    product_type: Optional[str] = "standard"
+    delivery_type: Optional[str] = "standard"
+    payment_mode: Optional[str] = "cash"
+    billing_location: Optional[str] = "sender"
+    total_amount: Optional[float] = 25.0
+    current_status: Optional[str] = "created"
     estimated_delivery_time: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 class ShipmentDetailResponse(ShipmentOut):
     status_history: List[ShipmentStatusHistoryOut] = []
-    prediction: PredictionDetails
+    prediction: PredictionDetails = Field(default_factory=lambda: PredictionDetails(prediction_state="accurate", confidence_score=0.95))
 
 # ----------------- Draft Schemas -----------------
 class DraftCreate(BaseModel):
@@ -161,98 +161,101 @@ class DraftUpdate(BaseModel):
 
 class DraftOut(BaseModel):
     id: str
-    user_id: str
-    name: str
-    current_step: int
-    sender_details: Dict[str, Any]
-    receiver_details: Dict[str, Any]
-    product_details: Dict[str, Any]
-    payment_details: Dict[str, Any]
-    created_at: datetime
-    updated_at: datetime
+    user_id: Optional[str] = "usr_demo"
+    name: str = "Untitled Draft"
+    current_step: int = 1
+    sender_details: Dict[str, Any] = {}
+    receiver_details: Dict[str, Any] = {}
+    product_details: Dict[str, Any] = {}
+    payment_details: Dict[str, Any] = {}
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 # ----------------- Notification Schemas -----------------
 class NotificationOut(BaseModel):
     id: str
-    user_id: str
+    user_id: Optional[str] = "usr_demo"
     shipment_id: Optional[str] = None
-    title: str
-    message: str
-    type: str
-    is_read: bool
-    created_at: datetime
+    title: str = "Notification"
+    message: str = ""
+    type: str = "info"
+    is_read: bool = False
+    created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)
 
 # ----------------- Analytics Schemas -----------------
 class DashboardKPIs(BaseModel):
-    total_shipments: int
-    drafts_count: int
-    completed_shipments: int
-    in_progress_shipments: int
-    failed_shipments: int
-    total_spent: float
-    average_spent: float
-    success_rate: float
+    total_shipments: int = 0
+    drafts_count: int = 0
+    completed_shipments: int = 0
+    in_progress_shipments: int = 0
+    failed_shipments: int = 0
+    total_spent: float = 0.0
+    average_spent: float = 0.0
+    success_rate: float = 100.0
 
 class MonthlyShipmentsData(BaseModel):
     month: str
-    count: int
-    delivered: int
-    in_transit: int
+    count: int = 0
+    delivered: int = 0
+    in_transit: int = 0
 
 class MonthlySpendingData(BaseModel):
     month: str
-    amount: float
+    amount: float = 0.0
 
 class DistributionData(BaseModel):
     name: str
-    value: int
-    percentage: float
+    value: int = 0
+    percentage: float = 0.0
 
 class MonthlySuccessRateData(BaseModel):
     month: str
-    success_rate: float
-    total: int
+    success_rate: float = 100.0
+    total: int = 0
 
 class AnalyticsFullResponse(BaseModel):
     kpis: DashboardKPIs
-    monthly_shipments: List[MonthlyShipmentsData]
-    monthly_spending: List[MonthlySpendingData]
-    status_distribution: List[DistributionData]
-    delivery_type_distribution: List[DistributionData]
-    monthly_success_rate: List[MonthlySuccessRateData]
+    monthly_shipments: List[MonthlyShipmentsData] = []
+    monthly_spending: List[MonthlySpendingData] = []
+    status_distribution: List[DistributionData] = []
+    delivery_type_distribution: List[DistributionData] = []
+    monthly_success_rate: List[MonthlySuccessRateData] = []
 
 # ----------------- AI Schemas -----------------
 class ChatMessage(BaseModel):
     role: str  # user, assistant, system
     content: str
 
-class AIChatRequest(BaseModel):
+class ChatRequest(BaseModel):
     messages: List[ChatMessage]
+
+AIChatRequest = ChatRequest
 
 class StructuredRecommendation(BaseModel):
     delivery_type: str = "standard"
     product_type: str = "standard"
     payment_mode: str = "cash"
     billing_location: str = "sender"
-    estimated_cost: Optional[float] = None
-    estimated_days: Optional[str] = None
+    estimated_cost: float = 35.0
+    estimated_days: str = "3-5 business days"
     handling_notes: Optional[str] = None
-    product_name: Optional[str] = None
-    weight: Optional[float] = None
+    product_name: Optional[str] = "Standard Parcel"
+    weight: Optional[float] = 1.0
 
 class AIChatResponse(BaseModel):
     message: str
     recommendation: Optional[StructuredRecommendation] = None
 
+# ----------------- Simulation Response -----------------
 class SimulationResponse(BaseModel):
-    success: bool
-    message: str
+    success: bool = True
+    message: str = "Status updated"
     shipment: ShipmentOut
     previous_status: str
     new_status: str
     next_possible_status: Optional[str] = None
     notification_triggered: bool = True
     email_triggered: bool = True
-
+    prediction: Optional[PredictionDetails] = None

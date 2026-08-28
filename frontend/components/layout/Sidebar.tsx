@@ -37,15 +37,15 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
 
   const handleSignOut = async () => {
     try {
-      localStorage.removeItem("better-auth.session_token");
-      localStorage.removeItem("session_token");
-      localStorage.removeItem("current_user_id");
-      localStorage.removeItem("current_user_email");
+      localStorage.clear();
+      document.cookie = "session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      document.cookie = "better-auth.session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       await signOut();
     } catch {
-      // fallback
+      window.location.href = "/login";
+    } finally {
+      window.location.href = "/login";
     }
-    window.location.href = "/login";
   };
 
   return (

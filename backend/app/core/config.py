@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # Database Connection
     DATABASE_URL: str = os.getenv(
@@ -25,12 +26,13 @@ class Settings(BaseSettings):
     # Simulation Mode
     ENABLE_SHIPMENT_SIMULATION: bool = os.getenv("ENABLE_SHIPMENT_SIMULATION", "true").lower() in ("true", "1", "yes")
 
-    # Email
+    # Email (SMTP / Gmail / Resend)
     SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST", "")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
     SMTP_USER: Optional[str] = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD", "")
     FROM_EMAIL: str = os.getenv("FROM_EMAIL", "notifications@onelogistics.com")
+    RESEND_API_KEY: Optional[str] = os.getenv("RESEND_API_KEY", "")
 
     class Config:
         case_sensitive = True

@@ -39,6 +39,21 @@ def get_current_user(
         user = db.query(User).filter(User.email == x_user_email).first()
         if user:
             return user
+        # Auto-provision user if logging in via Google demo/OAuth
+        new_user = User(
+            id=x_user_id or f"usr_google_{int(datetime.now(timezone.utc).timestamp())}",
+            name="Alex Morgan",
+            email=x_user_email,
+            email_verified=True,
+            image="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+        )
+        db.add(new_user)
+        try:
+            db.commit()
+            db.refresh(new_user)
+            return new_user
+        except Exception:
+            db.rollback()
 
     # 2. Check Bearer token against Better Auth session table
     if authorization and authorization.startswith("Bearer "):
@@ -60,7 +75,7 @@ def get_current_user(
         except Exception:
             pass
 
-    # 3. Fallback to default demo user in development
+    # 3. Fallback to default demo user
     demo_user = db.query(User).filter(User.email == "demo@onelogistics.com").first()
     if demo_user:
         return demo_user

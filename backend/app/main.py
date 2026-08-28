@@ -20,6 +20,18 @@ from app.api.ai import router as ai_router
 async def lifespan(app: FastAPI):
     # Initialize DB tables & seed demo data on startup
     Base.metadata.create_all(bind=engine)
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE shipments ALTER COLUMN sender_details DROP NOT NULL;"))
+            conn.execute(text("ALTER TABLE shipments ALTER COLUMN receiver_details DROP NOT NULL;"))
+            conn.execute(text("ALTER TABLE shipments ALTER COLUMN product_details DROP NOT NULL;"))
+            conn.execute(text("ALTER TABLE shipments ALTER COLUMN amount DROP NOT NULL;"))
+            conn.execute(text("ALTER TABLE shipments ALTER COLUMN prediction_state DROP NOT NULL;"))
+            conn.commit()
+    except Exception:
+        pass
+
     db = SessionLocal()
     try:
         seed_database(db)

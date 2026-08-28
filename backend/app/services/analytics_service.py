@@ -23,7 +23,8 @@ class AnalyticsService:
         )
         failed = sum(1 for s in shipments if s.current_status in ("failed", "exception"))
 
-        total_spent = sum(s.total_amount for s in shipments)
+        # Safe sum handling None values in DB records
+        total_spent = sum((s.total_amount or 0.0) for s in shipments)
         average_spent = total_spent / total_shipments if total_shipments > 0 else 0.0
 
         # Success rate
@@ -36,9 +37,9 @@ class AnalyticsService:
             completed_shipments=completed,
             in_progress_shipments=in_progress,
             failed_shipments=failed,
-            total_spent=round(total_spent, 2),
-            average_spent=round(average_spent, 2),
-            success_rate=round(success_rate, 1)
+            total_spent=round(float(total_spent), 2),
+            average_spent=round(float(average_spent), 2),
+            success_rate=round(float(success_rate), 1)
         )
 
     @staticmethod
@@ -48,8 +49,6 @@ class AnalyticsService:
 
         # Monthly aggregation
         months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
-        monthly_ship_counts = {m: {"total": 0, "delivered": 0, "in_transit": 0} for m in months}
-        monthly_spend_map = {m: 0.0 for m in months}
 
         # Seeded distribution fallbacks
         base_counts = {"Oct": 12, "Nov": 18, "Dec": 28, "Jan": 22, "Feb": 31, "Mar": max(len(shipments), 25)}
@@ -71,7 +70,7 @@ class AnalyticsService:
         # Status distribution
         status_counts = defaultdict(int)
         for s in shipments:
-            status_counts[s.current_status] += 1
+            status_counts[s.current_status or "created"] += 1
 
         total = len(shipments) or 1
         status_dist = [
@@ -84,8 +83,8 @@ class AnalyticsService:
         ]
 
         # Delivery type distribution
-        standard_count = sum(1 for s in shipments if s.delivery_type.lower() == "standard")
-        express_count = sum(1 for s in shipments if s.delivery_type.lower() == "express")
+        standard_count = sum(1 for s in shipments if (s.delivery_type or "").lower() == "standard")
+        express_count = sum(1 for s in shipments if (s.delivery_type or "").lower() == "express")
         deliv_total = len(shipments) or 1
 
         delivery_dist = [
@@ -118,4 +117,3 @@ class AnalyticsService:
             delivery_type_distribution=delivery_dist,
             monthly_success_rate=monthly_success
         )
-
